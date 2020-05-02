@@ -9,6 +9,12 @@ It uses websockets to receive data from Discord and Webhooks to send chat messag
 You must first register as a bot in the discord developer site to get the token information.
 
 The environment variables are required:
-- export DISCORDTOKEN='xxxxx'
-- export DISCORD_BOT_TOKEN='Bot yyyyyy'
+
+# DISCORD_API is the primary http api endpoint
 - export DISCORD_API='https://discord.com/api'
+
+# DISCORDTOKEN is used to send data to the Discord websocket api
+- export DISCORDTOKEN='xxxxx'
+
+# DISCORD_BOT_TOKEN is used to talk to the Discord http api
+- export DISCORD_BOT_TOKEN='Bot yyyyyy'
