@@ -12,22 +12,22 @@ import (
 )
 
 func main() {
+	// Get the config details and init the bot
 	config := Config{
 		token:   os.Getenv("DISCORD_BOT_TOKEN"),
 		baseURL: os.Getenv("DISCORD_API"),
 		client:  http.Client{Timeout: 10 * time.Second},
 	}
 
-	// init
 	bot := Bot{
 		uid:    config.getBotUser().ID,
 		guilds: config.getGuilds(),
 	}
 
 	knownHooks := config.getWebhookMap(bot)
-
 	color.Green.Println(knownHooks)
 
+	// Do webhook handling
 	HandleWS(config)
 }
 
