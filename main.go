@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	c := Config{
+	config := Config{
 		token:   os.Getenv("DISCORD_BOT_TOKEN"),
 		baseURL: os.Getenv("DISCORD_API"),
 		client:  http.Client{Timeout: 10 * time.Second},
@@ -20,21 +20,22 @@ func main() {
 
 	// init
 	bot := Bot{
-		uid:    c.getBotUser().ID,
-		guilds: c.getBotGuilds(),
+		uid:    config.getBotUser().ID,
+		guilds: config.getGuilds(),
 	}
 
-	knownHooks := getWebhookMap(bot, c)
+	knownHooks := config.getWebhookMap(bot)
 
 	color.Green.Println(knownHooks)
 
-	HandleWS(c)
+	HandleWS(config)
 }
 
-func getWebhookMap(b Bot, c Config) map[string]string {
+// getWebhookMap provides a map of channelID string to Webhook Token string
+func (conf Config) getWebhookMap(bot Bot) map[string]string {
 	var knownHooks = make(map[string]string)
-	for _, g := range b.guilds {
-		hooks := c.getWebhooksForGuild(g)
+	for _, guild := range bot.guilds {
+		hooks := conf.getWebhooksForGuild(guild)
 		for _, hook := range hooks {
 			knownHooks[string(hook.ChannelID)] = string(hook.Token)
 		}
@@ -42,109 +43,111 @@ func getWebhookMap(b Bot, c Config) map[string]string {
 	return knownHooks
 }
 
-func (c Config) getWebhooksForGuild(g Guild) []Webhook {
+// getWebhooksForGuild returns all Webhooks for a Guild
+func (conf Config) getWebhooksForGuild(guild Guild) []Webhook {
 	// Build the appropriate request
-	fullURL := c.baseURL + "/guilds/" + string(g.Id) + "/webhooks"
+	fullURL := conf.baseURL + "/guilds/" + string(guild.Id) + "/webhooks"
 	request, _ := http.NewRequest("GET", fullURL, nil)
-	request.Header.Add("Authorization", c.token)
+	request.Header.Add("Authorization", conf.token)
 
 	// Make the request
-	resp, err := c.client.Do(request)
+	resp, err := conf.client.Do(request)
 	if err != nil {
 		log.Printf("Error making request %+v", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse the response into the data we return
-	var wh []Webhook
+	var webhooks []Webhook
 	bodyJson, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	err = json.Unmarshal([]byte(bodyJson), &wh)
+	err = json.Unmarshal([]byte(bodyJson), &webhooks)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	return wh
+	return webhooks
 
 }
 
-func (c Config) getBotUser() User {
+// getBotUser returns the userID for the Bot
+func (conf Config) getBotUser() User {
 	// Build the appropriate request
-	fullURL := c.baseURL + "/users/@me"
+	fullURL := conf.baseURL + "/users/@me"
 	request, _ := http.NewRequest("GET", fullURL, nil)
-	request.Header.Add("Authorization", c.token)
+	request.Header.Add("Authorization", conf.token)
 
 	// Make the request
-	resp, err := c.client.Do(request)
+	resp, err := conf.client.Do(request)
 	if err != nil {
 		log.Printf("Error making request %+v", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse the response into the data we return
-	var u User
+	var user User
 	bodyJson, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	err = json.Unmarshal([]byte(bodyJson), &u)
+	err = json.Unmarshal([]byte(bodyJson), &user)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	return u
+	return user
 }
 
-func (c Config) getGateway() string {
+// getGateway returns the current API gateway published by discord
+func (conf Config) getGateway() string {
 	// Build the appropriate request
-	fullURL := c.baseURL + "/gateway"
+	fullURL := conf.baseURL + "/gateway"
 	request, _ := http.NewRequest("GET", fullURL, nil)
-	//request.Header.Add("Authorization", c.token)
 
 	// Make the request
-	resp, err := c.client.Do(request)
+	resp, err := conf.client.Do(request)
 	if err != nil {
 		log.Printf("Error making request %+v", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse the response into the data we return
-	var gw Gateway
+	var gateway Gateway
 	bodyJson, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	err = json.Unmarshal([]byte(bodyJson), &gw)
+	err = json.Unmarshal([]byte(bodyJson), &gateway)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	fmt.Println(string(gw.Url))
-	return string(gw.Url)
+	return string(gateway.Url)
 }
 
-func (c Config) getBotGuilds() []Guild {
+// getGuilds returns the guilds that our tokens provide access to
+func (conf Config) getGuilds() []Guild {
 	// Build the appropriate request
-	fullURL := c.baseURL + "/users/@me/guilds"
+	fullURL := conf.baseURL + "/users/@me/guilds"
 	request, _ := http.NewRequest("GET", fullURL, nil)
-	request.Header.Add("Authorization", c.token)
+	request.Header.Add("Authorization", conf.token)
 
 	// Make the request
-	resp, err := c.client.Do(request)
+	resp, err := conf.client.Do(request)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse the response into the data we return
-	var g []Guild
+	var guild []Guild
 	bodyJson, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	err = json.Unmarshal([]byte(bodyJson), &g)
+	err = json.Unmarshal([]byte(bodyJson), &guild)
 	if err != nil {
 		fmt.Errorf("%+v", err)
 	}
-	return g
+	return guild
 
 }

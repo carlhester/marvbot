@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,22 +14,18 @@ import (
 )
 
 func HandleWS(conf Config) {
-	flag.Parse()
-	log.SetFlags(0)
-
-	token := os.Getenv("DISCORDTOKEN")
-	config := wsConfig{Token: token}
+	config := wsConfig{Token: os.Getenv("DISCORDTOKEN")}
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
 	addr := conf.getGateway()
-	u := fmt.Sprintf("%s/?v=6&encoding=json", addr)
-	c, _, err := websocket.DefaultDialer.Dial(u, http.Header{"Authorization": []string{config.Token}})
+	url := fmt.Sprintf("%s/?v=6&encoding=json", addr)
+	wsConn, _, err := websocket.DefaultDialer.Dial(url, http.Header{"Authorization": []string{config.Token}})
 	if err != nil {
 		log.Fatal("dial error:", err)
 	}
-	defer c.Close()
+	defer wsConn.Close()
 
 	done := make(chan struct{})
 
@@ -38,38 +33,38 @@ func HandleWS(conf Config) {
 		defer close(done)
 		for {
 			color.Cyan.Println("reading...")
-			_, message, err := c.ReadMessage()
+			_, message, err := wsConn.ReadMessage()
 			color.Cyan.Println("ReadMessage got a new message...")
 			if err != nil {
 				log.Println("read error: ", err)
 				return
 			}
-			var p Payload
-			err = json.Unmarshal(message, &p)
+			var payload Payload
+			err = json.Unmarshal(message, &payload)
 			if err != nil {
 				log.Println("Unmarshal error: ", err)
 
 				log.Fatal(err)
 			}
 			color.Cyan.Println("Payload: ")
-			color.Green.Printf("%+v\n", p)
-			color.Cyan.Println("Switching p.Op: ", p.Op, p.T, p.S)
-			switch p.Op {
+			color.Green.Printf("%+v\n", payload)
+			color.Cyan.Println("Switching payload.Op: ", payload.Op, payload.T, payload.S)
+			switch payload.Op {
 			case 0:
-				_, ok := p.D["content"]
-				if ok && p.T == "MESSAGE_CREATE" {
-					color.Cyan.Println(p.Op, p.D["author"], p.D["content"])
-					handlePayload(p)
+				_, ok := payload.D["content"]
+				if ok && payload.T == "MESSAGE_CREATE" {
+					color.Cyan.Println(payload.Op, payload.D["author"], payload.D["content"])
+					handlePayload(payload)
 				}
 			case 7:
 				return
 			case 9:
 				return
 			case 10:
-				go sendIdentify(config, c)
-				go sendHeartbeat(p, c)
+				go sendIdentify(config, wsConn)
+				go sendHeartbeat(payload, wsConn)
 			default:
-				color.Cyan.Println("No handler defined for p.Op: ", p.Op)
+				color.Cyan.Println("No handler defined for payload.Op: ", payload.Op)
 			}
 		}
 	}()
@@ -85,7 +80,7 @@ func HandleWS(conf Config) {
 
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			err := wsConn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
 				log.Println("write close:", err)
 				return
@@ -100,16 +95,16 @@ func HandleWS(conf Config) {
 
 }
 
-func handlePayload(p Payload) {
+func handlePayload(payload Payload) {
 	color.Blue.Printf("%+v\n", p)
-	authorData := p.D["author"].(map[string]interface{})
-	channelID := p.D["channel_id"]
-	content := p.D["content"]
+	authorData := payload.D["author"].(map[string]interface{})
+	channelID := payload.D["channel_id"]
+	content := payload.D["content"]
 	userName := (authorData["username"])
 	color.Green.Printf("%s[%s]: %s\n", userName, channelID, content)
 }
 
-func sendIdentify(config wsConfig, c *websocket.Conn) {
+func sendIdentify(config wsConfig, wsConn *websocket.Conn) {
 	color.Green.Println("Sending Identify")
 
 	properties := make(map[string]string)
@@ -131,25 +126,25 @@ func sendIdentify(config wsConfig, c *websocket.Conn) {
 	if err != nil {
 		log.Println("error marshalling:", err)
 	}
-	err = c.WriteMessage(websocket.TextMessage, []byte(identifyJson))
+	err = wsConn.WriteMessage(websocket.TextMessage, []byte(identifyJson))
 	if err != nil {
 		log.Println("error WriteMessage:", err)
 	}
 	color.Green.Println("Sent Identify", string(identifyJson))
 }
 
-func sendHeartbeat(p Payload, c *websocket.Conn) {
+func sendHeartbeat(payload Payload, wsConn *websocket.Conn) {
 	color.Cyan.Println("Starting Heartbeat Cycle")
 	for {
-		color.Cyan.Println("Received opcode10, will send heartbeat after sleeping for", p.D["heartbeat_interval"])
-		time.Sleep(time.Duration(p.D["heartbeat_interval"].(float64)) * time.Millisecond)
-		hb := Heartbeat{Op: 1, D: p.S}
+		color.Cyan.Println("Received opcode10, will send heartbeat after sleeping for", payload.D["heartbeat_interval"])
+		time.Sleep(time.Duration(payload.D["heartbeat_interval"].(float64)) * time.Millisecond)
+		hb := Heartbeat{Op: 1, D: payload.S}
 		hbJson, err := json.Marshal(hb)
 		if err != nil {
 			log.Println("error marshalling:", err)
 		}
 		color.Green.Println("Sending heartbeat: ", string(hbJson))
-		err = c.WriteMessage(websocket.TextMessage, []byte(hbJson))
+		err = wsConn.WriteMessage(websocket.TextMessage, []byte(hbJson))
 		if err != nil {
 			log.Println("error:", err)
 		}
