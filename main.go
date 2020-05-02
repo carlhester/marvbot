@@ -58,32 +58,6 @@ func (conf Config) getBotUser() User {
 	return user
 }
 
-// getGateway returns the current API gateway published by discord
-func (conf Config) getGateway() string {
-	// Build the appropriate request
-	fullURL := conf.baseURL + "/gateway"
-	request, _ := http.NewRequest("GET", fullURL, nil)
-
-	// Make the request
-	resp, err := conf.client.Do(request)
-	if err != nil {
-		log.Printf("Error making request %+v", err)
-	}
-	defer resp.Body.Close()
-
-	// Parse the response into the data we return
-	var gateway Gateway
-	bodyJson, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Errorf("%+v", err)
-	}
-	err = json.Unmarshal([]byte(bodyJson), &gateway)
-	if err != nil {
-		fmt.Errorf("%+v", err)
-	}
-	return string(gateway.Url)
-}
-
 // getGuilds returns the guilds that our tokens provide access to
 func (conf Config) getGuilds() []Guild {
 	// Build the appropriate request

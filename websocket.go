@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -14,23 +15,24 @@ import (
 )
 
 func HandleWebSocket(conf Config) {
-	config := wsConfig{Token: os.Getenv("DISCORDTOKEN")}
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
-
-	addr := conf.getGateway()
+	wsConfig := wsConfig{Token: os.Getenv("DISCORDTOKEN")}
+	addr, err := conf.getGateway()
+	if err != nil {
+		fmt.Errorf("Unable to get Discord gateway. %+v", err)
+	}
 	url := fmt.Sprintf("%s/?v=6&encoding=json", addr)
-	wsConn, _, err := websocket.DefaultDialer.Dial(url, http.Header{"Authorization": []string{config.Token}})
+	wsConn, _, err := websocket.DefaultDialer.Dial(url, http.Header{"Authorization": []string{wsConfig.Token}})
 	if err != nil {
 		log.Fatal("dial error:", err)
 	}
 	defer wsConn.Close()
 
-	done := make(chan struct{})
+	interruptChannel := make(chan os.Signal, 1)
+	signal.Notify(interruptChannel, os.Interrupt)
+	doneChannel := make(chan struct{})
 
 	go func() {
-		defer close(done)
+		defer close(doneChannel)
 		for {
 			color.Cyan.Println("reading...")
 			_, message, err := wsConn.ReadMessage()
@@ -61,7 +63,7 @@ func HandleWebSocket(conf Config) {
 			case 9:
 				return
 			case 10:
-				go sendWSIdentify(config, wsConn)
+				go sendWSIdentify(wsConfig, wsConn)
 				go sendWSHeartbeat(payload, wsConn)
 			default:
 				color.Cyan.Println("No handler defined for payload.Op: ", payload.Op)
@@ -73,9 +75,9 @@ func HandleWebSocket(conf Config) {
 
 	for {
 		select {
-		case <-done:
+		case <-doneChannel:
 			return
-		case <-interrupt:
+		case <-interruptChannel:
 			log.Println("interrupt")
 
 			// Cleanly close the connection by sending a close message and then
@@ -86,7 +88,7 @@ func HandleWebSocket(conf Config) {
 				return
 			}
 			select {
-			case <-done:
+			case <-doneChannel:
 			case <-time.After(time.Second):
 			}
 			return
@@ -104,7 +106,7 @@ func handleWSPayload(payload Payload) {
 	color.Green.Printf("%s[%s]: %s\n", userName, channelID, content)
 }
 
-func sendWSIdentify(config wsConfig, wsConn *websocket.Conn) {
+func sendWSIdentify(wsConfig wsConfig, wsConn *websocket.Conn) {
 	color.Green.Println("Sending Identify")
 
 	properties := make(map[string]string)
@@ -113,7 +115,7 @@ func sendWSIdentify(config wsConfig, wsConn *websocket.Conn) {
 	properties["$device"] = "mybot"
 
 	identifyData := IdentifyData{
-		Token:      config.Token,
+		Token:      wsConfig.Token,
 		Properties: properties,
 	}
 
@@ -149,4 +151,33 @@ func sendWSHeartbeat(payload Payload, wsConn *websocket.Conn) {
 			log.Println("error:", err)
 		}
 	}
+}
+
+// getGateway returns the current API gateway published by discord
+func (conf Config) getGateway() (string, error) {
+	// Build the appropriate request
+	fullURL := conf.baseURL + "/gateway"
+	request, _ := http.NewRequest("GET", fullURL, nil)
+
+	// Make the request
+	resp, err := conf.client.Do(request)
+	if err != nil {
+		log.Printf("Error making request %+v", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	// Parse the response into the data we return
+	var gateway Gateway
+	bodyJson, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Errorf("%+v", err)
+		return "", err
+	}
+	err = json.Unmarshal([]byte(bodyJson), &gateway)
+	if err != nil {
+		fmt.Errorf("%+v", err)
+		return "", err
+	}
+	return string(gateway.Url), nil
 }
