@@ -38,19 +38,18 @@ func HandleWebSocket(conf Config) {
 			_, message, err := wsConn.ReadMessage()
 			color.Cyan.Println("ReadMessage got a new message...")
 			if err != nil {
-				log.Println("read error: ", err)
+				log.Println("ReadMessage error: ", err)
 				return
 			}
 			var payload Payload
 			err = json.Unmarshal(message, &payload)
 			if err != nil {
 				log.Println("Unmarshal error: ", err)
-
 				log.Fatal(err)
 			}
 			color.Cyan.Println("Payload: ")
 			color.Green.Printf("%+v\n", payload)
-			color.Cyan.Println("Switching payload.Op: ", payload.Op, payload.T, payload.S)
+			color.Cyan.Println("Switching payloadOp: ", payload.Op, payload.T, payload.S)
 			switch payload.Op {
 			case 0:
 				_, ok := payload.D["content"]

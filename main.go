@@ -19,16 +19,24 @@ func main() {
 		client:  http.Client{Timeout: 10 * time.Second},
 	}
 
+	guilds := config.getGuilds()
+
 	bot := Bot{
-		uid:    config.getBotUser().ID,
-		guilds: config.getGuilds(),
+		Uid:    config.getBotUser().ID,
+		Guilds: guilds,
+		Hooks:  config.getWebhookMap(guilds),
 	}
 
-	knownHooks := config.getWebhookMap(bot)
-	color.Green.Println(knownHooks)
+	color.Blue.Printf("Uid: %+v\n", bot.Uid)
+	color.Blue.Printf("Guilds: %+v\n", bot.Guilds)
+	color.Blue.Printf("Hooks: %+v\n", bot.Hooks)
+	//knownHooks := config.getWebhookMap(bot)
+	//color.Green.Printf("%+v\n", knownHooks)
 
 	// Do websocket handling
-	HandleWebSocket(config)
+	//HandleWebSocket(config)
+	channelID := "xxx"
+	_ = config.sendMessage(bot, channelID, "I'm alive")
 }
 
 // getBotUser returns the userID for the Bot

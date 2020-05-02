@@ -8,13 +8,13 @@ import (
 	"net/http"
 )
 
-// getWebhookMap provides a map of channelID string to Webhook Token string
-func (conf Config) getWebhookMap(bot Bot) map[string]string {
-	var knownHooks = make(map[string]string)
-	for _, guild := range bot.guilds {
+// getWebhookMap provides a map of channelID string to Webhooks
+func (conf Config) getWebhookMap(guilds []Guild) map[string]Webhook {
+	var knownHooks = make(map[string]Webhook)
+	for _, guild := range guilds {
 		hooks := conf.getWebhooksForGuild(guild)
 		for _, hook := range hooks {
-			knownHooks[string(hook.ChannelID)] = string(hook.Token)
+			knownHooks[string(hook.ChannelID)] = hook
 		}
 	}
 	return knownHooks

@@ -109,8 +109,9 @@ type Message struct {
 }
 
 type Bot struct {
-	uid    string
-	guilds []Guild
+	Uid    string
+	Guilds []Guild
+	Hooks  map[string]Webhook
 }
 
 type Gateway struct {
