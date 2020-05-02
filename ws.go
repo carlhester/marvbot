@@ -96,7 +96,7 @@ func HandleWS(conf Config) {
 }
 
 func handlePayload(payload Payload) {
-	color.Blue.Printf("%+v\n", p)
+	color.Blue.Printf("%+v\n", payload)
 	authorData := payload.D["author"].(map[string]interface{})
 	channelID := payload.D["channel_id"]
 	content := payload.D["content"]
