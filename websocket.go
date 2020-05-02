@@ -13,7 +13,7 @@ import (
 	color "gopkg.in/gookit/color.v1"
 )
 
-func HandleWS(conf Config) {
+func HandleWebSocket(conf Config) {
 	config := wsConfig{Token: os.Getenv("DISCORDTOKEN")}
 
 	interrupt := make(chan os.Signal, 1)
@@ -54,15 +54,15 @@ func HandleWS(conf Config) {
 				_, ok := payload.D["content"]
 				if ok && payload.T == "MESSAGE_CREATE" {
 					color.Cyan.Println(payload.Op, payload.D["author"], payload.D["content"])
-					handlePayload(payload)
+					handleWSPayload(payload)
 				}
 			case 7:
 				return
 			case 9:
 				return
 			case 10:
-				go sendIdentify(config, wsConn)
-				go sendHeartbeat(payload, wsConn)
+				go sendWSIdentify(config, wsConn)
+				go sendWSHeartbeat(payload, wsConn)
 			default:
 				color.Cyan.Println("No handler defined for payload.Op: ", payload.Op)
 			}
@@ -95,7 +95,7 @@ func HandleWS(conf Config) {
 
 }
 
-func handlePayload(payload Payload) {
+func handleWSPayload(payload Payload) {
 	color.Blue.Printf("%+v\n", payload)
 	authorData := payload.D["author"].(map[string]interface{})
 	channelID := payload.D["channel_id"]
@@ -104,7 +104,7 @@ func handlePayload(payload Payload) {
 	color.Green.Printf("%s[%s]: %s\n", userName, channelID, content)
 }
 
-func sendIdentify(config wsConfig, wsConn *websocket.Conn) {
+func sendWSIdentify(config wsConfig, wsConn *websocket.Conn) {
 	color.Green.Println("Sending Identify")
 
 	properties := make(map[string]string)
@@ -133,7 +133,7 @@ func sendIdentify(config wsConfig, wsConn *websocket.Conn) {
 	color.Green.Println("Sent Identify", string(identifyJson))
 }
 
-func sendHeartbeat(payload Payload, wsConn *websocket.Conn) {
+func sendWSHeartbeat(payload Payload, wsConn *websocket.Conn) {
 	color.Cyan.Println("Starting Heartbeat Cycle")
 	for {
 		color.Cyan.Println("Received opcode10, will send heartbeat after sleeping for", payload.D["heartbeat_interval"])

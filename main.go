@@ -28,7 +28,7 @@ func main() {
 	color.Green.Println(knownHooks)
 
 	// Do websocket handling
-	HandleWS(config)
+	HandleWebSocket(config)
 }
 
 // getBotUser returns the userID for the Bot
