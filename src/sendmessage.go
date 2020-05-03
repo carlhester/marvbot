@@ -15,15 +15,14 @@ func (conf Config) sendMessage(bot Bot, channelID string, content string) error 
 	}
 	// Build the appropriate request
 	fullURL := conf.baseURL + "/webhooks/" + string(hook.ID) + "/" + string(hook.Token)
-
 	requestBody, err := json.Marshal(map[string]string{
 		"content":       content,
 		"Authorization": conf.token,
 	})
+
 	if err != nil {
 		fmt.Errorf("Error Marshaling requestBody: %+v", err)
 	}
-	//request.Header.Add("Authorization", conf.token)
 
 	resp, err := http.Post(fullURL, "application/json", bytes.NewBuffer(requestBody))
 	if err != nil {

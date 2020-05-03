@@ -34,9 +34,9 @@ func main() {
 	//color.Green.Printf("%+v\n", knownHooks)
 
 	// Do websocket handling
-	//HandleWebSocket(config)
-	channelID := "xxx"
-	_ = config.sendMessage(bot, channelID, "I'm alive")
+	HandleWebSocket(config)
+	//channelID := "xxx"
+	//_ = config.sendMessage(bot, channelID, "I'm alive")
 }
 
 // getBotUser returns the userID for the Bot

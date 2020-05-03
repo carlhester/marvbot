@@ -8,6 +8,22 @@ import (
 	"net/http"
 )
 
+type Webhook struct {
+	Name      string      `json:"name"`
+	Type      int         `json:"type"`
+	ChannelID string      `json:"channel_id"`
+	Token     string      `json:"token"`
+	Avatar    interface{} `json:"avatar"`
+	GuildID   string      `json:"guild_id"`
+	ID        string      `json:"id"`
+	User      struct {
+		Username      string `json:"username"`
+		Discriminator string `json:"discriminator"`
+		ID            string `json:"id"`
+		Avatar        string `json:"avatar"`
+	} `json:"user"`
+}
+
 // getWebhookMap provides a map of channelID string to Webhooks
 func (conf Config) getWebhookMap(guilds []Guild) map[string]Webhook {
 	var knownHooks = make(map[string]Webhook)
