@@ -18,3 +18,4 @@ DISCORDTOKEN is used to send data to the Discord websocket api
 
 DISCORD_BOT_TOKEN is used to talk to the Discord http api
 - export DISCORD_BOT_TOKEN='Bot yyyyyy'
+.
